@@ -84,3 +84,11 @@ class WalkForwardBacktester:
         if side == "short" and spy_regime == Regime.Bull:
             return False
         return True
+
+    def _net_return(self, side: str, entry: float, exit_: float, days_held: int) -> float:
+        round_trip_cost = 2.0 * (self.tx_cost + self.slippage)
+        if side == "long":
+            gross = (exit_ - entry) / entry
+        else:
+            gross = (entry - exit_) / entry - self.short_borrow * days_held
+        return gross - round_trip_cost

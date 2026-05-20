@@ -122,3 +122,34 @@ def test_spy_bull_allows_long():
 def test_spy_bear_allows_short():
     bt = WalkForwardBacktester(_cfg())
     assert bt._apply_gate(ticker_regime=Regime.Bear, spy_regime=Regime.Bear, side="short") is True
+
+
+def test_long_net_return_deducts_costs():
+    bt = WalkForwardBacktester(_cfg())
+    # Long: buy at 100, sell at 110 → gross = 10/100 = 0.10
+    # round-trip cost = 2 * (tx_cost + slippage) = 2 * (0.001 + 0.0005) = 0.003
+    # net = 0.10 - 0.003 = 0.097
+    net = bt._net_return(side="long", entry=100.0, exit_=110.0, days_held=5)
+    assert net == pytest.approx(0.10 - 2 * (0.001 + 0.0005), rel=1e-6)
+
+
+def test_short_net_return_deducts_costs_and_borrow():
+    bt = WalkForwardBacktester(_cfg())
+    # Short: sell at 100, buy back at 90 → gross = (100-90)/100 = 0.10
+    # borrow cost = 0.0001 * 5 days = 0.0005
+    # round-trip cost = 0.003
+    # net = 0.10 - 0.003 - 0.0005 = 0.0965
+    net = bt._net_return(side="short", entry=100.0, exit_=90.0, days_held=5)
+    assert net == pytest.approx(0.10 - 2 * (0.001 + 0.0005) - 0.0001 * 5, rel=1e-6)
+
+
+def test_long_losing_trade_net_return_is_negative():
+    bt = WalkForwardBacktester(_cfg())
+    net = bt._net_return(side="long", entry=100.0, exit_=95.0, days_held=3)
+    assert net < 0
+
+
+def test_short_losing_trade_net_return_is_negative():
+    bt = WalkForwardBacktester(_cfg())
+    net = bt._net_return(side="short", entry=100.0, exit_=105.0, days_held=3)
+    assert net < 0
