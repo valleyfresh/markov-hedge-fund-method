@@ -109,3 +109,14 @@ def test_n_step_forecast_n1_matches_matrix_row():
     assert abs(forecast["Bull"]     - engine._matrix[current, Regime.Bull])     < 1e-9
     assert abs(forecast["Bear"]     - engine._matrix[current, Regime.Bear])     < 1e-9
     assert abs(forecast["Sideways"] - engine._matrix[current, Regime.Sideways]) < 1e-9
+
+
+def test_engine_loads_from_config():
+    from markov.config import load_config
+    cfg = load_config("config.yaml")
+    engine = RegimeEngine(
+        lookback_days=cfg["lookback_days"],
+        threshold_pct=cfg["threshold_pct"],
+    )
+    assert engine.lookback_days == 20
+    assert engine.threshold_pct == 0.05
