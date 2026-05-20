@@ -25,7 +25,7 @@ class TelegramNotifier:
 
     def _format(self, event: SignalEvent, price: float, stop: float, shares: float) -> str:
         emoji = _EMOJI[event.action]
-        risk_pct_str = f"{int(event.risk_pct * 100)}%"
+        risk_pct_str = f"{round(event.risk_pct * 100)}%"
 
         if event.action in ("LONG_ENTRY", "SHORT_ENTRY"):
             direction = "LONG" if event.action == "LONG_ENTRY" else "SHORT"
@@ -41,11 +41,16 @@ class TelegramNotifier:
             )
 
         direction = "LONG" if event.action == "LONG_EXIT" else "SHORT"
-        trigger = (
-            f"regime flipped to {event.ticker_regime.name}"
-            if event.action == "LONG_EXIT" and event.ticker_regime.name == "Bear"
-            else f"SPY turned {event.spy_regime.name}"
-        )
+        if event.action == "LONG_EXIT":
+            if event.ticker_regime.name == "Bear":
+                trigger = f"regime flipped to {event.ticker_regime.name}"
+            else:
+                trigger = f"SPY turned {event.spy_regime.name}"
+        else:  # SHORT_EXIT
+            if event.ticker_regime.name == "Bull":
+                trigger = f"regime flipped to {event.ticker_regime.name}"
+            else:
+                trigger = f"SPY turned {event.spy_regime.name}"
         return (
             f"{emoji} EXIT {direction} — {event.ticker}\n"
             f"   Trigger: {trigger}\n"

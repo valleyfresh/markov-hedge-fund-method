@@ -80,3 +80,104 @@ def test_send_raises_on_api_failure():
         mock_post.return_value = MagicMock(ok=False, text="Unauthorized")
         with pytest.raises(RuntimeError, match="Telegram"):
             notifier.send(_entry_event(), price=212.40, stop=205.10, shares=47)
+
+
+def test_long_exit_ticker_bear_trigger():
+    notifier = _notifier()
+    event = SignalEvent(
+        ticker="AAPL",
+        action="LONG_EXIT",
+        conviction=0.60,
+        conviction_tier="MEDIUM",
+        risk_pct=0.02,
+        spy_regime=Regime.Sideways,
+        ticker_regime=Regime.Bear,
+    )
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = MagicMock(ok=True)
+        notifier.send(event, price=220.0, stop=0.0, shares=0)
+    text = mock_post.call_args[1]["json"]["text"]
+    assert "regime flipped" in text
+    assert "Bear" in text
+
+
+def test_long_exit_spy_bear_trigger():
+    notifier = _notifier()
+    event = SignalEvent(
+        ticker="AAPL",
+        action="LONG_EXIT",
+        conviction=0.30,
+        conviction_tier="LOW",
+        risk_pct=0.01,
+        spy_regime=Regime.Bear,
+        ticker_regime=Regime.Sideways,
+    )
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = MagicMock(ok=True)
+        notifier.send(event, price=220.0, stop=0.0, shares=0)
+    text = mock_post.call_args[1]["json"]["text"]
+    assert "SPY" in text
+    assert "Bear" in text
+
+
+def test_short_exit_ticker_bull_trigger():
+    notifier = _notifier()
+    event = SignalEvent(
+        ticker="NVDA",
+        action="SHORT_EXIT",
+        conviction=0.70,
+        conviction_tier="HIGH",
+        risk_pct=0.03,
+        spy_regime=Regime.Sideways,
+        ticker_regime=Regime.Bull,
+    )
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = MagicMock(ok=True)
+        notifier.send(event, price=800.0, stop=0.0, shares=0)
+    text = mock_post.call_args[1]["json"]["text"]
+    assert "EXIT" in text
+    assert "SHORT" in text
+    assert "regime flipped" in text
+    assert "Bull" in text
+
+
+def test_short_exit_spy_bull_trigger():
+    notifier = _notifier()
+    event = SignalEvent(
+        ticker="NVDA",
+        action="SHORT_EXIT",
+        conviction=0.40,
+        conviction_tier="MEDIUM",
+        risk_pct=0.02,
+        spy_regime=Regime.Bull,
+        ticker_regime=Regime.Bear,
+    )
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = MagicMock(ok=True)
+        notifier.send(event, price=800.0, stop=0.0, shares=0)
+    text = mock_post.call_args[1]["json"]["text"]
+    assert "SPY" in text
+    assert "Bull" in text
+
+
+def test_short_entry_message_contains_required_fields():
+    notifier = _notifier()
+    event = SignalEvent(
+        ticker="NVDA",
+        action="SHORT_ENTRY",
+        conviction=0.65,
+        conviction_tier="MEDIUM",
+        risk_pct=0.02,
+        spy_regime=Regime.Bear,
+        ticker_regime=Regime.Bear,
+    )
+    with patch("requests.post") as mock_post:
+        mock_post.return_value = MagicMock(ok=True)
+        notifier.send(event, price=800.0, stop=820.0, shares=25)
+    text = mock_post.call_args[1]["json"]["text"]
+    assert "SHORT" in text
+    assert "800" in text
+    assert "820" in text
+    assert "25" in text
+    assert "MEDIUM" in text
+    assert "2%" in text
