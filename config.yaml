@@ -1,0 +1,25 @@
+# config.yaml
+watchlist: [AAPL, NVDA, MSFT, AMZN, META]
+spy_ticker: SPY
+lookback_days: 20
+threshold_pct: 0.05
+
+risk:
+  portfolio_value: 10000
+  atr_period: 14
+  atr_multiplier: 1.5
+  conviction_tiers:
+    low:    [0.00, 0.40, 0.01]
+    medium: [0.40, 0.70, 0.02]
+    high:   [0.70, 1.00, 0.03]
+
+backtest:
+  train_days: 252
+  test_days: 21
+  tx_cost_pct: 0.001
+  slippage_pct: 0.0005
+  short_borrow_daily_pct: 0.0001
+
+telegram:
+  token: "${TELEGRAM_TOKEN}"
+  chat_id: "${TELEGRAM_CHAT_ID}"
