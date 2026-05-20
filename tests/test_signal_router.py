@@ -54,13 +54,13 @@ def test_no_short_entry_when_spy_bull():
     assert event is None
 
 
-def test_no_entry_when_already_long():
+def test_hold_when_long_in_bull_regime():
     router = _router()
     event = router.evaluate("AAPL", Regime.Bull, Regime.Bull, "long", 0.80)
     assert event is None
 
 
-def test_no_entry_when_already_short():
+def test_hold_when_short_in_bear_regime():
     router = _router()
     event = router.evaluate("AAPL", Regime.Bear, Regime.Bear, "short", 0.80)
     assert event is None
@@ -132,3 +132,36 @@ def test_signal_event_has_spy_and_ticker_regime():
     event = router.evaluate("AAPL", Regime.Bull, Regime.Sideways, "flat", 0.55)
     assert event.spy_regime == Regime.Sideways
     assert event.ticker_regime == Regime.Bull
+
+
+def test_signal_event_conviction_tier_at_boundary_040():
+    router = _router()
+    event = router.evaluate("AAPL", Regime.Bull, Regime.Bull, "flat", 0.40)
+    assert event.conviction_tier == "MEDIUM"
+    assert event.risk_pct == pytest.approx(0.02)
+
+
+def test_signal_event_conviction_tier_at_boundary_070():
+    router = _router()
+    event = router.evaluate("AAPL", Regime.Bull, Regime.Bull, "flat", 0.70)
+    assert event.conviction_tier == "HIGH"
+    assert event.risk_pct == pytest.approx(0.03)
+
+
+def test_signal_event_conviction_tier_at_max_100():
+    router = _router()
+    event = router.evaluate("AAPL", Regime.Bull, Regime.Bull, "flat", 1.0)
+    assert event.conviction_tier == "HIGH"
+    assert event.risk_pct == pytest.approx(0.03)
+
+
+def test_invalid_conviction_raises():
+    router = _router()
+    with pytest.raises(ValueError, match="conviction"):
+        router.evaluate("AAPL", Regime.Bull, Regime.Bull, "flat", 1.5)
+
+
+def test_invalid_current_side_raises():
+    router = _router()
+    with pytest.raises(ValueError, match="current_side"):
+        router.evaluate("AAPL", Regime.Bull, Regime.Bull, "FLAT", 0.5)
