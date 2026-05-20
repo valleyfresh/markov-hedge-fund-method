@@ -153,3 +153,45 @@ def test_short_losing_trade_net_return_is_negative():
     bt = WalkForwardBacktester(_cfg())
     net = bt._net_return(side="short", entry=100.0, exit_=105.0, days_held=3)
     assert net < 0
+
+
+def test_metrics_win_rate():
+    bt = WalkForwardBacktester(_cfg())
+    trades = [
+        _make_trade(net_return=0.05),
+        _make_trade(net_return=-0.02),
+        _make_trade(net_return=0.03),
+    ]
+    result = bt._compute_metrics("SPY", trades, 10150.0)
+    assert result.win_rate == pytest.approx(2 / 3)
+
+
+def test_metrics_avg_win_avg_loss():
+    bt = WalkForwardBacktester(_cfg())
+    trades = [
+        _make_trade(net_return=0.06),
+        _make_trade(net_return=0.04),
+        _make_trade(net_return=-0.02),
+    ]
+    result = bt._compute_metrics("SPY", trades, 10200.0)
+    assert result.avg_win  == pytest.approx(0.05)
+    assert result.avg_loss == pytest.approx(-0.02)
+
+
+def test_metrics_max_drawdown_negative():
+    bt = WalkForwardBacktester(_cfg())
+    trades = [
+        _make_trade(net_return=0.10),
+        _make_trade(net_return=-0.20),
+        _make_trade(net_return=0.05),
+    ]
+    result = bt._compute_metrics("SPY", trades, 9000.0)
+    assert result.max_drawdown < 0
+
+
+def test_metrics_empty_trades_returns_zeros():
+    bt = WalkForwardBacktester(_cfg())
+    result = bt._compute_metrics("SPY", [], 10000.0)
+    assert result.sharpe == 0.0
+    assert result.win_rate == 0.0
+    assert result.trades == []

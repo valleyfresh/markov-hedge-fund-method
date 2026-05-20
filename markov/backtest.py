@@ -92,3 +92,39 @@ class WalkForwardBacktester:
         else:
             gross = (entry - exit_) / entry - self.short_borrow * days_held
         return gross - round_trip_cost
+
+    def _compute_metrics(
+        self, ticker: str, trades: list[Trade], final_portfolio: float
+    ) -> BacktestResult:
+        if not trades:
+            return BacktestResult(ticker=ticker)
+
+        returns = [t.net_return for t in trades]
+        wins   = [r for r in returns if r > 0]
+        losses = [r for r in returns if r <= 0]
+
+        pv = float(self.portfolio_value)
+        equity = [pv]
+        for t in trades:
+            pv *= 1.0 + t.net_return * t.risk_pct
+            equity.append(pv)
+        equity_series = pd.Series(equity, dtype=float)
+
+        peak     = equity_series.cummax()
+        drawdown = (equity_series - peak) / peak
+        max_dd   = float(drawdown.min())
+
+        arr = np.array(returns, dtype=float)
+        std = float(arr.std(ddof=1)) if len(arr) > 1 else 0.0
+        sharpe = float(arr.mean() / std * np.sqrt(252)) if std > 0 else 0.0
+
+        return BacktestResult(
+            ticker=ticker,
+            trades=trades,
+            equity_curve=equity_series,
+            sharpe=sharpe,
+            max_drawdown=max_dd,
+            win_rate=len(wins) / len(returns),
+            avg_win=float(np.mean(wins))    if wins   else 0.0,
+            avg_loss=float(np.mean(losses)) if losses else 0.0,
+        )
