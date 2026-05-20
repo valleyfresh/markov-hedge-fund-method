@@ -148,8 +148,8 @@ regime_abbr(r)   => r == 0 ? "BULL"        : r == 1 ? "BEAR"        : "SIDE"
 // ────────────────────────────────────────────────────────────────────────────
 // Per-bar regime label
 //
-// log_ret = log(close / close[lookback]) — total log-return over the window.
-// regime: 0 = Sideways, 1 = Bull, 2 = Bear (integer encoding matches spec §3).
+// simple_ret = (close - close[lookback]) / close[lookback] — rolling pct return.
+// regime: 0 = Bull, 1 = Bear, 2 = Sideways (matches Python encoding).
 // ────────────────────────────────────────────────────────────────────────────
 simple_ret = (close - close[lookback_window]) / close[lookback_window]
 regime     = na(simple_ret) ? int(na) : simple_ret > bull_threshold_pct / 100.0 ? 0 : simple_ret < -bear_threshold_pct / 100.0 ? 1 : 2
