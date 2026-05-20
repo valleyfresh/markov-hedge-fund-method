@@ -52,3 +52,60 @@ def test_raises_before_fit():
     engine = RegimeEngine()
     with pytest.raises(RuntimeError, match="fit"):
         engine.current_regime()
+
+
+def test_transition_matrix_rows_sum_to_one():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_mixed_prices())
+    for row in engine._matrix:
+        assert abs(row.sum() - 1.0) < 1e-9
+
+
+def test_signal_returns_regime_and_conviction_in_range():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_prices(0.01))
+    regime, conviction = engine.signal()
+    assert isinstance(regime, Regime)
+    assert 0.0 <= conviction <= 1.0
+
+
+def test_signal_bull_when_bull_prob_exceeds_bear():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_prices(0.01))
+    regime, _ = engine.signal()
+    assert regime == Regime.Bull
+
+
+def test_signal_bear_when_bear_prob_exceeds_bull():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_prices(-0.01))
+    regime, _ = engine.signal()
+    assert regime == Regime.Bear
+
+
+def test_stationary_dist_sums_to_one():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_mixed_prices())
+    dist = engine.stationary_dist()
+    assert set(dist.keys()) == {"Bull", "Bear", "Sideways"}
+    assert abs(sum(dist.values()) - 1.0) < 1e-6
+    for v in dist.values():
+        assert v >= 0.0
+
+
+def test_n_step_forecast_sums_to_one():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_mixed_prices())
+    forecast = engine.n_step_forecast(5)
+    assert set(forecast.keys()) == {"Bull", "Bear", "Sideways"}
+    assert abs(sum(forecast.values()) - 1.0) < 1e-6
+
+
+def test_n_step_forecast_n1_matches_matrix_row():
+    engine = RegimeEngine(lookback_days=20, threshold_pct=0.05)
+    engine.fit(_mixed_prices())
+    forecast = engine.n_step_forecast(1)
+    current = int(engine.current_regime())
+    assert abs(forecast["Bull"]     - engine._matrix[current, Regime.Bull])     < 1e-9
+    assert abs(forecast["Bear"]     - engine._matrix[current, Regime.Bear])     < 1e-9
+    assert abs(forecast["Sideways"] - engine._matrix[current, Regime.Sideways]) < 1e-9

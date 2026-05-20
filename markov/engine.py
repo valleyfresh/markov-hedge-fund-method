@@ -45,3 +45,39 @@ class RegimeEngine:
         if self._labels is None:
             raise RuntimeError("Call fit() before reading regime.")
         return Regime(int(self._labels.iloc[-1]))
+
+    def signal(self) -> tuple[Regime, float]:
+        if self._matrix is None:
+            raise RuntimeError("Call fit() before reading signal.")
+        current = int(self.current_regime())
+        row = self._matrix[current]
+        bull_prob = row[Regime.Bull]
+        bear_prob = row[Regime.Bear]
+        conviction = float(abs(bull_prob - bear_prob))
+        direction = Regime.Bull if bull_prob >= bear_prob else Regime.Bear
+        return direction, conviction
+
+    def stationary_dist(self) -> dict[str, float]:
+        if self._matrix is None:
+            raise RuntimeError("Call fit() before reading stationary dist.")
+        eigvals, eigvecs = np.linalg.eig(self._matrix.T)
+        idx = int(np.argmin(np.abs(eigvals - 1.0)))
+        pi = np.abs(np.real(eigvecs[:, idx]))
+        pi = pi / pi.sum()
+        return {
+            "Bull":     float(pi[Regime.Bull]),
+            "Bear":     float(pi[Regime.Bear]),
+            "Sideways": float(pi[Regime.Sideways]),
+        }
+
+    def n_step_forecast(self, n: int) -> dict[str, float]:
+        if self._matrix is None:
+            raise RuntimeError("Call fit() before forecasting.")
+        current = int(self.current_regime())
+        m_n = np.linalg.matrix_power(self._matrix, n)
+        row = m_n[current]
+        return {
+            "Bull":     float(row[Regime.Bull]),
+            "Bear":     float(row[Regime.Bear]),
+            "Sideways": float(row[Regime.Sideways]),
+        }
