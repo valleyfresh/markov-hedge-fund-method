@@ -1,4 +1,3 @@
-# tests/test_engine.py
 import pandas as pd
 import pytest
 from markov.engine import Regime, RegimeEngine
@@ -6,7 +5,6 @@ from markov.engine import Regime, RegimeEngine
 
 def _prices(daily_pct: float, n: int = 60, start: float = 100.0) -> pd.Series:
     """Build a price series with a fixed daily return for n bars."""
-    import numpy as np
     prices = [start * (1 + daily_pct) ** i for i in range(n)]
     idx = pd.date_range("2023-01-01", periods=n, freq="B")
     return pd.Series(prices, index=idx)
@@ -14,7 +12,6 @@ def _prices(daily_pct: float, n: int = 60, start: float = 100.0) -> pd.Series:
 
 def _mixed_prices(n: int = 120) -> pd.Series:
     """Alternating up/down blocks to generate all three regimes."""
-    import numpy as np
     block = n // 3
     up   = [100.0 * (1.01) ** i for i in range(block)]
     flat = [up[-1] * (1.001) ** i for i in range(block)]

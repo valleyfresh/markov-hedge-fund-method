@@ -1,4 +1,3 @@
-# markov/engine.py
 from __future__ import annotations
 
 from enum import IntEnum
@@ -31,7 +30,8 @@ class RegimeEngine:
 
     def fit(self, prices: pd.Series) -> "RegimeEngine":
         labels = self._label(prices)
-        matrix = np.zeros((3, 3), dtype=float)
+        n = len(Regime)
+        matrix = np.zeros((n, n), dtype=float)
         arr = labels.to_numpy(dtype=int)
         for i in range(len(arr) - 1):
             matrix[arr[i], arr[i + 1]] += 1.0
