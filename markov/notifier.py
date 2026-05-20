@@ -17,13 +17,13 @@ class TelegramNotifier:
         self._url = f"https://api.telegram.org/bot{token}/sendMessage"
         self._chat_id = chat_id
 
-    def send(self, event: SignalEvent, price: float, stop: float, shares: float) -> None:
-        text = self._format(event, price, stop, shares)
+    def send(self, event: SignalEvent, price: float, stop: float) -> None:
+        text = self._format(event, price, stop)
         resp = requests.post(self._url, json={"chat_id": self._chat_id, "text": text})
         if not resp.ok:
             raise RuntimeError(f"Telegram send failed: {resp.text}")
 
-    def _format(self, event: SignalEvent, price: float, stop: float, shares: float) -> str:
+    def _format(self, event: SignalEvent, price: float, stop: float) -> str:
         emoji = _EMOJI[event.action]
         risk_pct_str = f"{round(event.risk_pct * 100)}%"
 
@@ -35,7 +35,6 @@ class TelegramNotifier:
                 f"   Daily regime: {event.ticker_regime.name}\n"
                 f"   Close price at signal: ~${price:.2f}  (use 1H chart for actual entry)\n"
                 f"   ATR stop: ${stop:.2f}  (ATR14)\n"
-                f"   Position size: {shares:.0f} shares\n"
                 f"   SPY: {event.spy_regime.name} — gate open\n"
                 f"   → Drop to 1H for entry timing"
             )

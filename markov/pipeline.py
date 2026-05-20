@@ -40,7 +40,6 @@ def main(dry_run: bool = False) -> None:
     watchlist  = cfg["watchlist"]
     spy_ticker = cfg["spy_ticker"]
     atr_mult   = cfg["risk"]["atr_multiplier"]
-    portfolio  = cfg["risk"]["portfolio_value"]
 
     log.info("Fetching prices for %s + SPY", watchlist)
     all_tickers = list({spy_ticker} | set(watchlist))
@@ -84,18 +83,15 @@ def main(dry_run: bool = False) -> None:
         atr   = _atr14(ohlcv)
 
         if event.action == "LONG_ENTRY":
-            stop   = price - atr_mult * atr
-            shares = (portfolio * event.risk_pct) / max(abs(price - stop), 0.01)
+            stop = price - atr_mult * atr
             state.open(ticker, side="long", entry_price=price, stop_price=stop,
                        conviction=conviction, risk_pct=event.risk_pct)
         elif event.action == "SHORT_ENTRY":
-            stop   = price + atr_mult * atr
-            shares = (portfolio * event.risk_pct) / max(abs(price - stop), 0.01)
+            stop = price + atr_mult * atr
             state.open(ticker, side="short", entry_price=price, stop_price=stop,
                        conviction=conviction, risk_pct=event.risk_pct)
         else:
-            stop   = state.stop_price(ticker)
-            shares = (portfolio * state.risk_pct(ticker)) / max(abs(state.entry_price(ticker) - stop), 0.01)
+            stop = state.stop_price(ticker)
             state.close(ticker)
 
         log.info("%s: %s (conviction=%.2f, price=%.2f, stop=%.2f)",
@@ -104,7 +100,7 @@ def main(dry_run: bool = False) -> None:
         if dry_run:
             log.info("[DRY RUN] Would send Telegram: %s %s", event.action, ticker)
         else:
-            notifier.send(event, price=price, stop=stop, shares=shares)
+            notifier.send(event, price=price, stop=stop)
 
     state.save()
     log.info("Pipeline complete. State saved.")
