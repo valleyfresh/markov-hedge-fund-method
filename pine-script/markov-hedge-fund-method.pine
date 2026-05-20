@@ -139,11 +139,11 @@ c_off_txt     = color.new(color.white, 55)        // dim off-diagonal number
 c_hdr_txt     = color.new(color.white, 35)        // muted column/row header
 c_foot_txt    = color.new(color.white, 60)        // muted footer
 
-regime_solid(r) => r == 1 ? c_bull_solid  : r == 2 ? c_bear_solid  : c_side_solid
-regime_ribbon(r) => r == 1 ? c_bull_ribbon : r == 2 ? c_bear_ribbon : c_side_ribbon
-regime_dim(r)    => r == 1 ? c_bull_dim    : r == 2 ? c_bear_dim    : c_side_dim
-regime_name(r)   => r == 1 ? "Bull"        : r == 2 ? "Bear"        : "Sideways"
-regime_abbr(r)   => r == 1 ? "BULL"        : r == 2 ? "BEAR"        : "SIDE"
+regime_solid(r)  => r == 0 ? c_bull_solid  : r == 1 ? c_bear_solid  : c_side_solid
+regime_ribbon(r) => r == 0 ? c_bull_ribbon : r == 1 ? c_bear_ribbon : c_side_ribbon
+regime_dim(r)    => r == 0 ? c_bull_dim    : r == 1 ? c_bear_dim    : c_side_dim
+regime_name(r)   => r == 0 ? "Bull"        : r == 1 ? "Bear"        : "Sideways"
+regime_abbr(r)   => r == 0 ? "BULL"        : r == 1 ? "BEAR"        : "SIDE"
 
 // ────────────────────────────────────────────────────────────────────────────
 // Per-bar regime label
@@ -151,8 +151,8 @@ regime_abbr(r)   => r == 1 ? "BULL"        : r == 2 ? "BEAR"        : "SIDE"
 // log_ret = log(close / close[lookback]) — total log-return over the window.
 // regime: 0 = Sideways, 1 = Bull, 2 = Bear (integer encoding matches spec §3).
 // ────────────────────────────────────────────────────────────────────────────
-log_ret = math.log(close / close[lookback_window])
-regime  = na(log_ret) ? int(na) : log_ret > bull_threshold_pct / 100.0 ? 1 : log_ret < -bear_threshold_pct / 100.0 ? 2 : 0
+simple_ret = (close - close[lookback_window]) / close[lookback_window]
+regime     = na(simple_ret) ? int(na) : simple_ret > bull_threshold_pct / 100.0 ? 0 : simple_ret < -bear_threshold_pct / 100.0 ? 1 : 2
 
 // ────────────────────────────────────────────────────────────────────────────
 // Regime ribbon — subtle background tint per bar
@@ -348,7 +348,7 @@ if barstate.islast
 
         // Rows 2-4 — one per "today" regime
         for r = 0 to 2
-            row_name = r == 0 ? "BULL" : r == 1 ? "BEAR" : "SIDE"
+            row_name = regime_abbr(r)
             table.cell(tbl_matrix, 0, r + 2, row_name, text_color = c_hdr_txt, bgcolor = c_card_bg, text_size = hdr_size, text_halign = text.align_center)
 
             for c = 0 to 2
