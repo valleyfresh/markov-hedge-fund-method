@@ -128,3 +128,93 @@ class WalkForwardBacktester:
             avg_win=float(np.mean(wins))    if wins   else 0.0,
             avg_loss=float(np.mean(losses)) if losses else 0.0,
         )
+
+    def run(
+        self,
+        ticker_prices: dict[str, pd.DataFrame],
+        spy_prices: pd.DataFrame,
+    ) -> dict[str, "BacktestResult"]:
+        return {
+            ticker: self._run_ticker(ticker, ohlcv, spy_prices)
+            for ticker, ohlcv in ticker_prices.items()
+        }
+
+    def _run_ticker(
+        self, ticker: str, ohlcv: pd.DataFrame, spy_ohlcv: pd.DataFrame
+    ) -> "BacktestResult":
+        from markov.engine import Regime, RegimeEngine
+
+        close      = ohlcv["Close"]
+        spy_close  = spy_ohlcv["Close"]
+        atr_series = self._atr(ohlcv, self.atr_period)
+        trades: list[Trade] = []
+        portfolio_value = float(self.portfolio_value)
+        total = len(close)
+
+        start = self.train_days
+        while start + self.test_days <= total:
+            train_close     = close.iloc[start - self.train_days : start]
+            spy_train_close = spy_close.iloc[start - self.train_days : start]
+
+            ticker_eng = RegimeEngine(self.lookback_days, self.threshold_pct).fit(train_close)
+            spy_eng    = RegimeEngine(self.lookback_days, self.threshold_pct).fit(spy_train_close)
+
+            position_side: str | None = None
+            entry_price = stop_price = conviction = risk_pct = shares = 0.0
+            entry_date: pd.Timestamp | None = None
+
+            end = min(start + self.test_days, total - 1)
+            for i in range(start, end):
+                win_start = max(0, i + 1 - self.train_days)
+                ticker_eng.fit(close.iloc[win_start : i + 1])
+                spy_eng.fit(spy_close.iloc[win_start : i + 1])
+
+                ticker_regime = ticker_eng.current_regime()
+                spy_regime    = spy_eng.current_regime()
+                direction, conv = ticker_eng.signal()
+
+                price = float(close.iloc[i])
+                atr   = float(atr_series.iloc[i])
+                if np.isnan(atr) or atr == 0:
+                    atr = price * 0.02
+
+                if position_side is None:
+                    if direction == Regime.Bull and self._apply_gate(ticker_regime, spy_regime, "long"):
+                        rp   = self._risk_pct(conv)
+                        stop = price - self.atr_multiplier * atr
+                        entry_price, stop_price = price * (1 + self.slippage), stop
+                        entry_date, conviction, risk_pct = close.index[i], conv, rp
+                        shares = self._position_size(portfolio_value, rp, entry_price, stop_price)
+                        position_side = "long"
+                    elif direction == Regime.Bear and self._apply_gate(ticker_regime, spy_regime, "short"):
+                        rp   = self._risk_pct(conv)
+                        stop = price + self.atr_multiplier * atr
+                        entry_price, stop_price = price * (1 - self.slippage), stop
+                        entry_date, conviction, risk_pct = close.index[i], conv, rp
+                        shares = self._position_size(portfolio_value, rp, entry_price, stop_price)
+                        position_side = "short"
+                else:
+                    exit_triggered = (
+                        (position_side == "long"  and (ticker_regime == Regime.Bear or spy_regime == Regime.Bear or price <= stop_price)) or
+                        (position_side == "short" and (ticker_regime == Regime.Bull or spy_regime == Regime.Bull or price >= stop_price))
+                    )
+                    if exit_triggered:
+                        exit_price = price * (1 - self.slippage if position_side == "long" else 1 + self.slippage)
+                        days_held  = max(1, (close.index[i] - entry_date).days)
+                        net        = self._net_return(position_side, entry_price, exit_price, days_held)
+                        trades.append(Trade(
+                            ticker=ticker, side=position_side,
+                            entry_date=entry_date, exit_date=close.index[i],
+                            entry_price=entry_price, exit_price=exit_price,
+                            stop_price=stop_price, conviction=conviction,
+                            risk_pct=risk_pct, shares=shares,
+                            gross_return=(exit_price - entry_price) / entry_price if position_side == "long"
+                                         else (entry_price - exit_price) / entry_price,
+                            net_return=net,
+                        ))
+                        portfolio_value *= 1.0 + net * risk_pct
+                        position_side = None
+
+            start += self.test_days
+
+        return self._compute_metrics(ticker, trades, portfolio_value)
