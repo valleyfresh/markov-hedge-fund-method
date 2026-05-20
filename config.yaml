@@ -1,5 +1,5 @@
 # config.yaml
-watchlist: [AAPL, NVDA, MSFT, AMZN, META]
+watchlist: [UNH, ELV, SBUX, SNOW, RTX, LLY, MNST, MCD, IBM, JPM, PLTR]
 spy_ticker: SPY
 lookback_days: 20
 threshold_pct: 0.05
