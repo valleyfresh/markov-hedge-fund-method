@@ -165,3 +165,29 @@ def test_invalid_current_side_raises():
     router = _router()
     with pytest.raises(ValueError, match="current_side"):
         router.evaluate("AAPL", Regime.Bull, Regime.Bull, "FLAT", 0.5)
+
+
+from markov.state import PositionState
+
+
+def test_position_state_defaults_to_flat(tmp_path):
+    ps = PositionState(tmp_path / "positions.json")
+    assert ps.side("AAPL") == "flat"
+
+
+def test_position_state_save_and_load(tmp_path):
+    path = tmp_path / "positions.json"
+    ps = PositionState(path)
+    ps.open("AAPL", side="long", entry_price=212.40, stop_price=205.10, conviction=0.74, risk_pct=0.03)
+    ps.save()
+
+    ps2 = PositionState(path)
+    assert ps2.side("AAPL") == "long"
+    assert ps2.entry_price("AAPL") == pytest.approx(212.40)
+
+
+def test_position_state_close(tmp_path):
+    ps = PositionState(tmp_path / "positions.json")
+    ps.open("AAPL", side="long", entry_price=212.40, stop_price=205.10, conviction=0.74, risk_pct=0.03)
+    ps.close("AAPL")
+    assert ps.side("AAPL") == "flat"
