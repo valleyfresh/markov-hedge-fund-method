@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.pytest_cache/
+.mypy_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+env/
+
+# Pipeline state (runtime-generated, never commit)
+state/positions.json
+
+# Credentials
+.env
+
+# Logs (runtime-generated)
+logs/*.log
+
+# OS
+.DS_Store

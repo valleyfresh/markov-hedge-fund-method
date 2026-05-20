@@ -34,7 +34,7 @@ class TelegramNotifier:
                 f"   Conviction: {event.conviction:.2f} ({event.conviction_tier}) → {risk_pct_str} risk\n"
                 f"   Daily regime: {event.ticker_regime.name}\n"
                 f"   Close price at signal: ~${price:.2f}  (use 1H chart for actual entry)\n"
-                f"   ATR stop: ${stop:.2f}  (1.5×ATR14)\n"
+                f"   ATR stop: ${stop:.2f}  (ATR14)\n"
                 f"   Position size: {shares:.0f} shares\n"
                 f"   SPY: {event.spy_regime.name} — gate open\n"
                 f"   → Drop to 1H for entry timing"
