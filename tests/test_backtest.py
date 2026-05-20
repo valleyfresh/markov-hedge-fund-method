@@ -33,3 +33,59 @@ def test_backtest_result_defaults_to_empty():
     assert r.sharpe == 0.0
     assert r.max_drawdown == 0.0
     assert r.win_rate == 0.0
+
+
+import yaml
+from markov.backtest import WalkForwardBacktester
+
+
+def _cfg() -> dict:
+    with open("config.yaml") as f:
+        return yaml.safe_load(f)
+
+
+def test_conviction_tier_low():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._risk_pct(0.20) == pytest.approx(0.01)
+
+
+def test_conviction_tier_medium():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._risk_pct(0.55) == pytest.approx(0.02)
+
+
+def test_conviction_tier_high():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._risk_pct(0.75) == pytest.approx(0.03)
+
+
+def test_position_size_formula():
+    bt = WalkForwardBacktester(_cfg())
+    shares = bt._position_size(
+        portfolio_value=10000,
+        risk_pct=0.01,
+        entry_price=470.0,
+        stop_price=455.0,
+    )
+    assert shares == pytest.approx(100.0 / 15.0)
+
+
+def test_position_size_zero_when_stop_at_entry():
+    bt = WalkForwardBacktester(_cfg())
+    shares = bt._position_size(10000, 0.01, 470.0, 470.0)
+    assert shares == 0.0
+
+
+def test_atr_computed_correctly():
+    bt = WalkForwardBacktester(_cfg())
+    n = 30
+    idx = pd.date_range("2024-01-01", periods=n, freq="B")
+    ohlcv = pd.DataFrame({
+        "Open":  [100.0] * n,
+        "High":  [101.0] * n,
+        "Low":   [99.0]  * n,
+        "Close": [100.0] * n,
+        "Volume":[1_000_000] * n,
+    }, index=idx)
+    atr = bt._atr(ohlcv, period=14)
+    assert atr.iloc[-1] == pytest.approx(2.0, rel=1e-3)
