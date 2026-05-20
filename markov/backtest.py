@@ -76,3 +76,11 @@ class WalkForwardBacktester:
             [high - low, (high - prev).abs(), (low - prev).abs()], axis=1
         ).max(axis=1)
         return tr.rolling(period).mean()
+
+    def _apply_gate(self, ticker_regime: "Regime", spy_regime: "Regime", side: str) -> bool:
+        from markov.engine import Regime
+        if side == "long"  and spy_regime == Regime.Bear:
+            return False
+        if side == "short" and spy_regime == Regime.Bull:
+            return False
+        return True

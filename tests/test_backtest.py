@@ -89,3 +89,36 @@ def test_atr_computed_correctly():
     }, index=idx)
     atr = bt._atr(ohlcv, period=14)
     assert atr.iloc[-1] == pytest.approx(2.0, rel=1e-3)
+
+
+from markov.engine import Regime
+
+
+def test_spy_bull_suppresses_short():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bear, spy_regime=Regime.Bull, side="short") is False
+
+
+def test_spy_bear_suppresses_long():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bull, spy_regime=Regime.Bear, side="long") is False
+
+
+def test_spy_sideways_allows_long():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bull, spy_regime=Regime.Sideways, side="long") is True
+
+
+def test_spy_sideways_allows_short():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bear, spy_regime=Regime.Sideways, side="short") is True
+
+
+def test_spy_bull_allows_long():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bull, spy_regime=Regime.Bull, side="long") is True
+
+
+def test_spy_bear_allows_short():
+    bt = WalkForwardBacktester(_cfg())
+    assert bt._apply_gate(ticker_regime=Regime.Bear, spy_regime=Regime.Bear, side="short") is True
